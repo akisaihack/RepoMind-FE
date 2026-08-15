@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ConversationSidebar } from '../features/chat/ConversationSidebar'
 import { MessageList } from '../features/chat/MessageList'
 import { QuestionComposer } from '../features/chat/QuestionComposer'
-import { repoMindService } from '../services/mockRepoMindService'
+import { repoMindService } from '../services'
 import type {
   ChatMessage,
   Conversation,

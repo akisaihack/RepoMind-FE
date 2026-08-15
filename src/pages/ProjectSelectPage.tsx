@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { repoMindService } from '../services/mockRepoMindService'
+import { repoMindService } from '../services'
 import type { RepositoryAnalysisStatus, RepositoryInfo } from '../types/api'
 import '../styles/projects.css'
 
