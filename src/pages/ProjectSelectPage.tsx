@@ -1,54 +1,55 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { repoMindService } from '../services/mockRepoMindService'
-import type { ProjectAnalysisStatus, ProjectSummary } from '../types/api'
+import type { RepositoryAnalysisStatus, RepositoryInfo } from '../types/api'
 import '../styles/projects.css'
 
-const statusLabels: Record<ProjectAnalysisStatus, string> = {
+const statusLabels: Record<RepositoryAnalysisStatus, string> = {
   ready: '분석 완료',
-  sample: '샘플 데이터',
-  pending: '분석 대기',
+  indexing: '분석 중',
+  pending: '대기 중',
+  failed: '분석 실패',
 }
 
-function ProjectCard({ project }: { project: ProjectSummary }) {
-  const isAvailable = project.status !== 'pending'
+function extractRepoName(url: string) {
+  const parts = url.split('/')
+  return parts.length > 0 ? parts[parts.length - 1] : 'Unknown'
+}
+
+function RepositoryCard({ repository }: { repository: RepositoryInfo }) {
+  const isAvailable = repository.analysis_status === 'ready'
+  const repoName = extractRepoName(repository.repository_url)
 
   return (
     <article className="project-card">
       <div className="project-card__topline">
         <div className="project-card__mark" aria-hidden="true">
-          {project.name.slice(0, 1)}
+          {repoName.slice(0, 1).toUpperCase()}
         </div>
-        <span className={`status-badge status-badge--${project.status}`}>
+        <span className={`status-badge status-badge--${repository.analysis_status}`}>
           <span className="status-badge__dot" />
-          {statusLabels[project.status]}
+          {statusLabels[repository.analysis_status]}
         </span>
       </div>
 
       <div className="project-card__content">
-        <h2>{project.name}</h2>
-        <p>{project.description}</p>
+        <h2>{repoName}</h2>
+        <p>{repository.repository_url}</p>
       </div>
 
       <dl className="project-card__metadata">
         <div>
           <dt>Repository</dt>
-          <dd>{project.repository}</dd>
+          <dd>{repository.repository_url}</dd>
         </div>
         <div>
           <dt>Branch</dt>
-          <dd>{project.branch}</dd>
+          <dd>{repository.branch}</dd>
         </div>
       </dl>
 
-      <div className="project-card__tags" aria-label="기술 스택">
-        {[...project.languages, ...project.frameworks].map((technology) => (
-          <span key={technology}>{technology}</span>
-        ))}
-      </div>
-
       {isAvailable ? (
-        <Link className="project-card__action" to={`/projects/${project.id}`}>
+        <Link className="project-card__action" to={`/projects/${repository.id}`}>
           이 프로젝트에 질문하기
           <span aria-hidden="true">→</span>
         </Link>
@@ -62,7 +63,7 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
 }
 
 export function ProjectSelectPage() {
-  const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const [repositories, setRepositories] = useState<RepositoryInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string>()
 
@@ -70,9 +71,9 @@ export function ProjectSelectPage() {
     let isCurrent = true
 
     repoMindService
-      .getProjects()
+      .getRepositories()
       .then((result) => {
-        if (isCurrent) setProjects(result)
+        if (isCurrent) setRepositories(result)
       })
       .catch(() => {
         if (isCurrent) setError('프로젝트 목록을 불러오지 못했습니다.')
@@ -119,8 +120,8 @@ export function ProjectSelectPage() {
 
       {!isLoading && !error && (
         <section className="project-grid" aria-label="분석 프로젝트 목록">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+          {repositories.map((repo) => (
+            <RepositoryCard key={repo.id} repository={repo} />
           ))}
         </section>
       )}

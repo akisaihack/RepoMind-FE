@@ -1,8 +1,8 @@
 import { Link, NavLink } from 'react-router-dom'
-import type { ConversationSummary, ProjectSummary } from '../../types/api'
+import type { ConversationSummary, RepositoryInfo } from '../../types/api'
 
 interface ConversationSidebarProps {
-  project: ProjectSummary
+  repository: RepositoryInfo
   conversations: ConversationSummary[]
   activeConversationId?: string
 }
@@ -14,11 +14,18 @@ function formatUpdatedAt(value: string) {
   }).format(new Date(value))
 }
 
+function extractRepoName(url: string) {
+  const parts = url.split('/')
+  return parts.length > 0 ? parts[parts.length - 1] : 'Unknown'
+}
+
 export function ConversationSidebar({
-  project,
+  repository,
   conversations,
   activeConversationId,
 }: ConversationSidebarProps) {
+  const repoName = extractRepoName(repository.repository_url)
+
   return (
     <aside className="conversation-sidebar">
       <div className="conversation-sidebar__header">
@@ -31,7 +38,7 @@ export function ConversationSidebar({
 
         <Link
           className="new-conversation-button"
-          to={`/projects/${project.id}`}
+          to={`/projects/${repository.id}`}
           aria-current={!activeConversationId ? 'page' : undefined}
         >
           <span aria-hidden="true">＋</span>
@@ -53,7 +60,7 @@ export function ConversationSidebar({
                   className={({ isActive }) =>
                     isActive ? 'conversation-link is-active' : 'conversation-link'
                   }
-                  to={`/projects/${project.id}/conversations/${conversation.id}`}
+                  to={`/projects/${repository.id}/conversations/${conversation.id}`}
                 >
                   <span>{conversation.title}</span>
                   <time dateTime={conversation.updatedAt}>
@@ -68,11 +75,11 @@ export function ConversationSidebar({
 
       <div className="conversation-sidebar__project">
         <div className="project-summary__mark" aria-hidden="true">
-          {project.name.slice(0, 1)}
+          {repoName.slice(0, 1).toUpperCase()}
         </div>
         <div>
-          <strong>{project.name}</strong>
-          <span>{project.branch}</span>
+          <strong>{repoName}</strong>
+          <span>{repository.branch}</span>
         </div>
         <Link to="/projects" aria-label="다른 프로젝트 선택">
           변경
