@@ -16,7 +16,13 @@ function extractRepoName(url: string) {
   return parts.length > 0 ? parts[parts.length - 1] : 'Unknown'
 }
 
-function RepositoryCard({ repository }: { repository: RepositoryInfo }) {
+interface RepositoryCardProps {
+  repository: RepositoryInfo
+  onDelete: (id: string) => void
+  onRetry: (id: string) => void
+}
+
+function RepositoryCard({ repository, onDelete, onRetry }: RepositoryCardProps) {
   const isAvailable = repository.analysis_status === 'ready'
   const repoName = extractRepoName(repository.repository_url)
 
@@ -33,10 +39,25 @@ function RepositoryCard({ repository }: { repository: RepositoryInfo }) {
         <div className="project-card__mark" aria-hidden="true">
           {repoName.slice(0, 1).toUpperCase()}
         </div>
-        <span className={`status-badge status-badge--${repository.analysis_status}`}>
-          <span className="status-badge__dot" />
-          {statusLabels[repository.analysis_status]}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className={`status-badge status-badge--${repository.analysis_status}`}>
+            <span className="status-badge__dot" />
+            {statusLabels[repository.analysis_status]}
+          </span>
+          <button
+            type="button"
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', padding: '0 4px', lineHeight: 1 }}
+            onClick={(e) => {
+              e.preventDefault()
+              if (window.confirm('정말 이 레포지토리를 삭제하시겠습니까?')) {
+                onDelete(repository.id)
+              }
+            }}
+            title="삭제"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       <div className="project-card__content">
@@ -55,14 +76,31 @@ function RepositoryCard({ repository }: { repository: RepositoryInfo }) {
         </div>
       </dl>
 
-      <Link
-        className={`project-card__action ${!isAvailable ? 'project-card__action--disabled' : ''}`}
-        to={`/projects/${repository.id}`}
-        onClick={handleDisabledClick}
-      >
-        {isAvailable ? '이 레포지토리에 질문하기' : '분석 완료 후 이용 가능'}
-        {isAvailable && <span aria-hidden="true">→</span>}
-      </Link>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <Link
+          className={`project-card__action ${!isAvailable ? 'project-card__action--disabled' : ''}`}
+          to={`/projects/${repository.id}`}
+          onClick={handleDisabledClick}
+          style={{ flex: 1 }}
+        >
+          {isAvailable ? '이 레포지토리에 질문하기' : '분석 완료 후 이용 가능'}
+          {isAvailable && <span aria-hidden="true">→</span>}
+        </Link>
+        
+        {(repository.analysis_status === 'failed' || repository.analysis_status === 'ready') && (
+          <button
+            type="button"
+            className="project-card__action"
+            style={{ flex: '0 0 auto', padding: '0 16px', background: 'var(--surface-sunken)', color: 'var(--text-normal)' }}
+            onClick={(e) => {
+              e.preventDefault()
+              onRetry(repository.id)
+            }}
+          >
+            재분석
+          </button>
+        )}
+      </div>
     </article>
   )
 }
@@ -88,6 +126,24 @@ export function ProjectSelectPage() {
   useEffect(() => {
     loadRepositories()
   }, [])
+
+  const handleDelete = async (id: string) => {
+    try {
+      await repoMindService.deleteRepository(id)
+      loadRepositories()
+    } catch {
+      setError('레포지토리 삭제에 실패했습니다.')
+    }
+  }
+
+  const handleRetry = async (id: string) => {
+    try {
+      await repoMindService.retryAnalysis(id)
+      loadRepositories()
+    } catch {
+      setError('재분석 요청에 실패했습니다.')
+    }
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -188,7 +244,12 @@ export function ProjectSelectPage() {
       {!isLoading && !error && (
         <section className="project-grid" aria-label="분석 레포지토리 목록">
           {repositories.map((repo) => (
-            <RepositoryCard key={repo.id} repository={repo} />
+            <RepositoryCard 
+              key={repo.id} 
+              repository={repo} 
+              onDelete={handleDelete} 
+              onRetry={handleRetry} 
+            />
           ))}
         </section>
       )}

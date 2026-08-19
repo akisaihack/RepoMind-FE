@@ -43,21 +43,29 @@ export class ApiRepoMindService implements RepoMindService {
     }
   }
 
-  async getConversations(repositoryId: string): Promise<ConversationSummary[]> {
+  async getConversations(_repositoryId: string): Promise<ConversationSummary[]> {
     // 백엔드에 대화 기록 API가 아직 없으므로 빈 배열 반환 또는 추후 연동
     return []
   }
 
   async getConversation(
-    repositoryId: string,
-    conversationId: string,
+    _repositoryId: string,
+    _conversationId: string,
   ): Promise<Conversation | undefined> {
     // 백엔드 API 연동 전이므로 undefined 반환
     return undefined
   }
 
-  async askQuestion(request: AskQuestionRequest): Promise<AskQuestionResponse> {
+  async askQuestion(_request: AskQuestionRequest): Promise<AskQuestionResponse> {
     // 백엔드 질문 API 연동
     throw new Error('Not implemented yet')
+  }
+
+  async deleteRepository(repositoryId: string): Promise<void> {
+    await apiClient.delete(`/repositories/${repositoryId}`)
+  }
+
+  async retryAnalysis(repositoryId: string): Promise<void> {
+    await apiClient.post(`/repositories/${repositoryId}/retry`)
   }
 }

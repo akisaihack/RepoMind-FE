@@ -147,6 +147,22 @@ export class MockRepoMindService implements RepoMindService {
       assistantMessage: copy(assistantMessage),
     }
   }
+
+  async deleteRepository(repositoryId: string): Promise<void> {
+    await wait(200)
+    const index = mockRepositories.findIndex(r => r.id === repositoryId)
+    if (index >= 0) {
+      mockRepositories.splice(index, 1)
+    }
+  }
+
+  async retryAnalysis(repositoryId: string): Promise<void> {
+    await wait(200)
+    const repository = mockRepositories.find(r => r.id === repositoryId)
+    if (repository) {
+      repository.analysis_status = 'pending'
+    }
+  }
 }
 
 export const repoMindService: RepoMindService = new MockRepoMindService()
