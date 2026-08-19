@@ -3,12 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ConversationSidebar } from '../features/chat/ConversationSidebar'
 import { MessageList } from '../features/chat/MessageList'
 import { QuestionComposer } from '../features/chat/QuestionComposer'
-import { repoMindService } from '../services/mockRepoMindService'
+import { repoMindService } from '../services'
 import type {
   ChatMessage,
   Conversation,
   ConversationSummary,
-  ProjectSummary,
+  RepositoryInfo,
 } from '../types/api'
 import '../styles/workspace.css'
 
@@ -27,10 +27,16 @@ function createOptimisticMessage(question: string): ChatMessage {
   }
 }
 
+function extractRepoName(url: string) {
+  const parts = url.split('/')
+  return parts.length > 0 ? parts[parts.length - 1] : 'Unknown'
+}
+
 export function ProjectWorkspacePage() {
   const { projectId, conversationId } = useParams()
+  const repositoryId = projectId
   const navigate = useNavigate()
-  const [project, setProject] = useState<ProjectSummary>()
+  const [repository, setRepository] = useState<RepositoryInfo>()
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [conversation, setConversation] = useState<Conversation>()
   const [isLoading, setIsLoading] = useState(true)
@@ -41,28 +47,28 @@ export function ProjectWorkspacePage() {
     let isCurrent = true
 
     async function loadWorkspace() {
-      if (!projectId) return
+      if (!repositoryId) return
 
       setIsLoading(true)
       setError(undefined)
 
       try {
-        const [projectResult, conversationResults, conversationResult] =
+        const [repositoryResult, conversationResults, conversationResult] =
           await Promise.all([
-            repoMindService.getProject(projectId),
-            repoMindService.getConversations(projectId),
+            repoMindService.getRepository(repositoryId),
+            repoMindService.getConversations(repositoryId),
             conversationId
-              ? repoMindService.getConversation(projectId, conversationId)
+              ? repoMindService.getConversation(repositoryId, conversationId)
               : Promise.resolve(undefined),
           ])
 
         if (!isCurrent) return
-        setProject(projectResult)
+        setRepository(repositoryResult)
         setConversations(conversationResults)
         setConversation(conversationResult)
 
-        if (!projectResult) {
-          setError('존재하지 않는 프로젝트입니다.')
+        if (!repositoryResult) {
+          setError('존재하지 않는 레포지토리입니다.')
         } else if (conversationId && !conversationResult) {
           setError('대화를 찾을 수 없습니다. 새 대화를 시작해 주세요.')
         }
@@ -78,16 +84,16 @@ export function ProjectWorkspacePage() {
     return () => {
       isCurrent = false
     }
-  }, [conversationId, projectId])
+  }, [conversationId, repositoryId])
 
   async function handleQuestion(question: string) {
-    if (!projectId || !project || isResponding) return
+    if (!repositoryId || !repository || isResponding) return
 
     const previousConversation = conversation
     const optimisticMessage = createOptimisticMessage(question)
     const optimisticConversation: Conversation = {
       id: conversation?.id ?? 'new-conversation',
-      projectId,
+      repositoryId,
       title: conversation?.title ?? question,
       updatedAt: optimisticMessage.createdAt,
       messages: [...(conversation?.messages ?? []), optimisticMessage],
@@ -99,18 +105,18 @@ export function ProjectWorkspacePage() {
 
     try {
       const response = await repoMindService.askQuestion({
-        projectId,
+        repositoryId,
         conversationId,
         question,
       })
 
       setConversation(response.conversation)
-      const updatedConversations = await repoMindService.getConversations(projectId)
+      const updatedConversations = await repoMindService.getConversations(repositoryId)
       setConversations(updatedConversations)
 
       if (response.conversation.id !== conversationId) {
         navigate(
-          `/projects/${projectId}/conversations/${response.conversation.id}`,
+          `/projects/${repositoryId}/conversations/${response.conversation.id}`,
           { replace: true },
         )
       }
@@ -126,30 +132,32 @@ export function ProjectWorkspacePage() {
     return (
       <main className="workspace-status">
         <div className="workspace-loader" aria-label="Workspace 불러오는 중" />
-        <p>프로젝트 맥락을 불러오고 있습니다.</p>
+        <p>레포지토리 맥락을 불러오고 있습니다.</p>
       </main>
     )
   }
 
-  if (!project) {
+  if (!repository) {
     return (
       <main className="status-page">
         <div className="status-page__card">
-          <span className="eyebrow">PROJECT NOT FOUND</span>
-          <h1>프로젝트를 열 수 없습니다.</h1>
+          <span className="eyebrow">REPOSITORY NOT FOUND</span>
+          <h1>레포지토리를 열 수 없습니다.</h1>
           <p>{error}</p>
           <Link className="primary-button" to="/projects">
-            프로젝트 목록으로
+            레포지토리 목록으로
           </Link>
         </div>
       </main>
     )
   }
 
+  const repoName = extractRepoName(repository.repository_url)
+
   return (
     <main className="workspace-page">
       <ConversationSidebar
-        project={project}
+        repository={repository}
         conversations={conversations}
         activeConversationId={conversationId}
       />
@@ -157,9 +165,9 @@ export function ProjectWorkspacePage() {
       <section className="chat-workspace">
         <header className="chat-header">
           <div>
-            <strong>{project.name}</strong>
+            <strong>{repoName}</strong>
             <span>
-              {project.repository} · {project.branch}
+              {repository.repository_url} · {repository.branch}
             </span>
           </div>
           <span className="analysis-ready">
@@ -170,7 +178,7 @@ export function ProjectWorkspacePage() {
         {error && conversationId && (
           <div className="workspace-alert">
             <span>{error}</span>
-            <Link to={`/projects/${project.id}`}>새 대화 시작</Link>
+            <Link to={`/projects/${repository.id}`}>새 대화 시작</Link>
           </div>
         )}
 
@@ -178,7 +186,7 @@ export function ProjectWorkspacePage() {
           <MessageList
             messages={conversation?.messages ?? []}
             isResponding={isResponding}
-            projectName={project.name}
+            projectName={repoName}
           />
         </div>
 

@@ -1,12 +1,12 @@
 import { createMockAnswer } from '../mocks/answers'
-import { mockProjects } from '../mocks/projects'
+import { mockRepositories } from '../mocks/repositories'
 import type {
   AskQuestionRequest,
   AskQuestionResponse,
   ChatMessage,
   Conversation,
   ConversationSummary,
-  ProjectSummary,
+  RepositoryInfo,
 } from '../types/api'
 import type { RepoMindService } from './repoMindService'
 
@@ -53,35 +53,48 @@ function createConversationTitle(question: string) {
   return normalized.length > 30 ? `${normalized.slice(0, 30)}…` : normalized
 }
 
-class MockRepoMindService implements RepoMindService {
-  async getProjects(): Promise<ProjectSummary[]> {
+export class MockRepoMindService implements RepoMindService {
+  async createRepository(repository_url: string, branch: string): Promise<RepositoryInfo> {
+    await wait(400)
+    const newRepo: RepositoryInfo = {
+      id: createId('repo'),
+      repository_url,
+      branch,
+      latest_analyzed_sha: null,
+      analysis_status: 'pending',
+    }
+    mockRepositories.unshift(newRepo)
+    return copy(newRepo)
+  }
+
+  async getRepositories(): Promise<RepositoryInfo[]> {
     await wait(250)
-    return copy(mockProjects)
+    return copy(mockRepositories)
   }
 
-  async getProject(projectId: string): Promise<ProjectSummary | undefined> {
+  async getRepository(repositoryId: string): Promise<RepositoryInfo | undefined> {
     await wait(180)
-    const project = mockProjects.find((candidate) => candidate.id === projectId)
-    return project ? copy(project) : undefined
+    const repository = mockRepositories.find((candidate) => candidate.id === repositoryId)
+    return repository ? copy(repository) : undefined
   }
 
-  async getConversations(projectId: string): Promise<ConversationSummary[]> {
+  async getConversations(repositoryId: string): Promise<ConversationSummary[]> {
     await wait(160)
 
     return getStoredConversations()
-      .filter((conversation) => conversation.projectId === projectId)
+      .filter((conversation) => conversation.repositoryId === repositoryId)
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-      .map(({ id, title, updatedAt }) => ({ id, projectId, title, updatedAt }))
+      .map(({ id, repositoryId, title, updatedAt }) => ({ id, repositoryId, title, updatedAt }))
   }
 
   async getConversation(
-    projectId: string,
+    repositoryId: string,
     conversationId: string,
   ): Promise<Conversation | undefined> {
     await wait(220)
     const conversation = getStoredConversations().find(
       (candidate) =>
-        candidate.projectId === projectId && candidate.id === conversationId,
+        candidate.repositoryId === repositoryId && candidate.id === conversationId,
     )
     return conversation ? copy(conversation) : undefined
   }
@@ -94,7 +107,7 @@ class MockRepoMindService implements RepoMindService {
     let conversation = request.conversationId
       ? conversations.find(
           (candidate) =>
-            candidate.projectId === request.projectId &&
+            candidate.repositoryId === request.repositoryId &&
             candidate.id === request.conversationId,
         )
       : undefined
@@ -102,7 +115,7 @@ class MockRepoMindService implements RepoMindService {
     if (!conversation) {
       conversation = {
         id: createId('conversation'),
-        projectId: request.projectId,
+        repositoryId: request.repositoryId,
         title: createConversationTitle(request.question),
         updatedAt: now,
         messages: [],
@@ -132,6 +145,22 @@ class MockRepoMindService implements RepoMindService {
     return {
       conversation: copy(conversation),
       assistantMessage: copy(assistantMessage),
+    }
+  }
+
+  async deleteRepository(repositoryId: string): Promise<void> {
+    await wait(200)
+    const index = mockRepositories.findIndex(r => r.id === repositoryId)
+    if (index >= 0) {
+      mockRepositories.splice(index, 1)
+    }
+  }
+
+  async retryAnalysis(repositoryId: string): Promise<void> {
+    await wait(200)
+    const repository = mockRepositories.find(r => r.id === repositoryId)
+    if (repository) {
+      repository.analysis_status = 'pending'
     }
   }
 }

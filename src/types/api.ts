@@ -1,15 +1,11 @@
-export type ProjectAnalysisStatus = 'ready' | 'sample' | 'pending'
+export type RepositoryAnalysisStatus = 'pending' | 'indexing' | 'ready' | 'failed'
 
-export interface ProjectSummary {
+export interface RepositoryInfo {
   id: string
-  name: string
-  description: string
-  repository: string
+  repository_url: string
   branch: string
-  languages: string[]
-  frameworks: string[]
-  status: ProjectAnalysisStatus
-  lastAnalyzedAt?: string
+  latest_analyzed_sha: string | null
+  analysis_status: RepositoryAnalysisStatus
 }
 
 export type QuestionKind = 'location' | 'flow' | 'impact' | 'intent'
@@ -103,7 +99,7 @@ export interface ChatMessage {
 
 export interface ConversationSummary {
   id: string
-  projectId: string
+  repositoryId: string
   title: string
   updatedAt: string
 }
@@ -113,7 +109,7 @@ export interface Conversation extends ConversationSummary {
 }
 
 export interface AskQuestionRequest {
-  projectId: string
+  repositoryId: string
   conversationId?: string
   question: string
   kind?: QuestionKind

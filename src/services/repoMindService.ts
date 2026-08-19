@@ -3,16 +3,19 @@ import type {
   AskQuestionResponse,
   Conversation,
   ConversationSummary,
-  ProjectSummary,
+  RepositoryInfo,
 } from '../types/api'
 
 export interface RepoMindService {
-  getProjects(): Promise<ProjectSummary[]>
-  getProject(projectId: string): Promise<ProjectSummary | undefined>
-  getConversations(projectId: string): Promise<ConversationSummary[]>
+  createRepository(repository_url: string, branch: string): Promise<RepositoryInfo>
+  getRepositories(): Promise<RepositoryInfo[]>
+  getRepository(repositoryId: string): Promise<RepositoryInfo | undefined>
+  getConversations(repositoryId: string): Promise<ConversationSummary[]>
   getConversation(
-    projectId: string,
+    repositoryId: string,
     conversationId: string,
   ): Promise<Conversation | undefined>
   askQuestion(request: AskQuestionRequest): Promise<AskQuestionResponse>
+  deleteRepository(repositoryId: string): Promise<void>
+  retryAnalysis(repositoryId: string): Promise<void>
 }
