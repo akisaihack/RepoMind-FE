@@ -4,6 +4,7 @@ import { RepoMindApiError } from './apiError'
 import {
   mapChatMessageDto,
   mapMessageHistoryDto,
+  mapSessionResponseDto,
   mapSessionDto,
   mapSessionListDto,
 } from './apiMappers'
@@ -30,6 +31,13 @@ describe('API response mappers', () => {
       repositoryId: 'repository-1',
       title: '로그인 흐름',
       updatedAt: '2026-08-23T11:00:00+00:00',
+    })
+  })
+
+  it('maps one backend session response before a new chat request', () => {
+    expect(mapSessionResponseDto(sessionDto)).toMatchObject({
+      id: 'session-1',
+      repositoryId: 'repository-1',
     })
   })
 

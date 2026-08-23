@@ -81,6 +81,10 @@ export function mapSessionDto(session: SessionDto): ConversationSummary {
   }
 }
 
+export function mapSessionResponseDto(value: unknown): ConversationSummary {
+  return mapSessionDto(parseSessionDto(value))
+}
+
 export function mapSessionListDto(value: unknown): ConversationSummary[] {
   if (!isRecord(value) || !Array.isArray(value.sessions)) {
     throw invalidApiData('세션 목록 응답 형식이 올바르지 않습니다.')
