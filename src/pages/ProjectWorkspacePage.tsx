@@ -4,6 +4,7 @@ import { ConversationSidebar } from '../features/chat/ConversationSidebar'
 import { MessageList } from '../features/chat/MessageList'
 import { QuestionComposer } from '../features/chat/QuestionComposer'
 import { repoMindService } from '../services'
+import { toRepoMindApiError, toUserFacingMessage } from '../services/apiError'
 import type {
   ChatMessage,
   Conversation,
@@ -17,6 +18,13 @@ const starterQuestions = [
   '회원 탈퇴가 왜 논리 삭제로 구현되어 있어?',
   'MemberService를 수정하면 어디까지 영향이 있어?',
 ]
+
+const analysisStatusLabels = {
+  pending: '분석 대기 중',
+  indexing: '분석 중',
+  ready: '분석 완료',
+  failed: '분석 실패',
+} as const
 
 function createOptimisticMessage(question: string): ChatMessage {
   return {
@@ -72,8 +80,8 @@ export function ProjectWorkspacePage() {
         } else if (conversationId && !conversationResult) {
           setError('대화를 찾을 수 없습니다. 새 대화를 시작해 주세요.')
         }
-      } catch {
-        if (isCurrent) setError('Workspace를 불러오지 못했습니다.')
+      } catch (error: unknown) {
+        if (isCurrent) setError(toUserFacingMessage(toRepoMindApiError(error)))
       } finally {
         if (isCurrent) setIsLoading(false)
       }
@@ -86,8 +94,8 @@ export function ProjectWorkspacePage() {
     }
   }, [conversationId, repositoryId])
 
-  async function handleQuestion(question: string) {
-    if (!repositoryId || !repository || isResponding) return
+  async function handleQuestion(question: string): Promise<boolean> {
+    if (!repositoryId || !repository || isResponding) return false
 
     const previousConversation = conversation
     const optimisticMessage = createOptimisticMessage(question)
@@ -120,9 +128,11 @@ export function ProjectWorkspacePage() {
           { replace: true },
         )
       }
-    } catch {
+      return true
+    } catch (error: unknown) {
       setConversation(previousConversation)
-      setError('답변을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      setError(toUserFacingMessage(toRepoMindApiError(error)))
+      return false
     } finally {
       setIsResponding(false)
     }
@@ -153,6 +163,10 @@ export function ProjectWorkspacePage() {
   }
 
   const repoName = extractRepoName(repository.repository_url)
+  const isRepositoryReady = repository.analysis_status === 'ready'
+  const composerDisabledMessage = isRepositoryReady
+    ? undefined
+    : '레포지토리 분석이 완료된 뒤 질문할 수 있습니다.'
 
   return (
     <main className="workspace-page">
@@ -170,15 +184,15 @@ export function ProjectWorkspacePage() {
               {repository.repository_url} · {repository.branch}
             </span>
           </div>
-          <span className="analysis-ready">
-            <span /> Mock 분석 완료
+          <span className={`analysis-status analysis-status--${repository.analysis_status}`}>
+            <span /> {analysisStatusLabels[repository.analysis_status]}
           </span>
         </header>
 
-        {error && conversationId && (
+        {error && (
           <div className="workspace-alert">
             <span>{error}</span>
-            <Link to={`/projects/${repository.id}`}>새 대화 시작</Link>
+            {conversationId && <Link to={`/projects/${repository.id}`}>새 대화 시작</Link>}
           </div>
         )}
 
@@ -191,7 +205,8 @@ export function ProjectWorkspacePage() {
         </div>
 
         <QuestionComposer
-          disabled={isResponding}
+          disabled={isResponding || !isRepositoryReady}
+          disabledMessage={composerDisabledMessage}
           suggestions={conversation?.messages.length ? [] : starterQuestions}
           onSubmit={handleQuestion}
         />
