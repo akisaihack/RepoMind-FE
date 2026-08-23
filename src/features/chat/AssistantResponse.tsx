@@ -5,6 +5,7 @@ import type {
   EvidenceType,
 } from '../../types/api'
 import { CodeFlowGraph } from '../graph/CodeFlowGraph'
+import { MarkdownContent } from './MarkdownContent'
 
 interface AssistantResponseProps {
   message: ChatMessage
@@ -32,6 +33,7 @@ const confidenceLabels: Record<ConfidenceLevel, string> = {
 
 export function AssistantResponse({ message }: AssistantResponseProps) {
   const answer = message.answer
+  const hasGraphNodes = Boolean(answer?.graph && answer.graph.nodes.length > 0)
 
   return (
     <article className="chat-message chat-message--assistant">
@@ -40,7 +42,7 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
       </div>
       <div className="chat-message__body">
         <div className="chat-message__author">RepoMind</div>
-        <p className="chat-message__summary">{message.content}</p>
+        {!answer && <MarkdownContent className="markdown-content chat-message__summary" content={message.content} />}
 
         {answer && (
           <div className="structured-answer">
@@ -49,7 +51,7 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
                 <article className={`claim-card claim-card--${claim.kind}`} key={claim.id}>
                   <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
                   <h3>{claim.title}</h3>
-                  <p>{claim.content}</p>
+                  <MarkdownContent className="markdown-content" content={claim.content} />
                   <div className="claim-card__references">
                     {claim.evidenceIds.map((evidenceId) => {
                       const evidenceIndex = answer.evidence.findIndex(
@@ -66,7 +68,7 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
               ))}
             </section>
 
-            {answer.graph && (
+            {hasGraphNodes && answer.graph && (
               <details className="answer-panel" open>
                 <summary>
                   <span>
@@ -95,7 +97,7 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
                       <code>{evidence.location}</code>
                     </div>
                     <strong>{evidence.title}</strong>
-                    <p>{evidence.description}</p>
+                    <MarkdownContent className="markdown-content evidence-list__description" content={evidence.description} />
                     {evidence.excerpt && <pre>{evidence.excerpt}</pre>}
                   </li>
                 ))}

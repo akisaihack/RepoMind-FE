@@ -412,6 +412,82 @@
   word-break: keep-all;
 }
 
+.markdown-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content p,
+.markdown-content ul,
+.markdown-content ol,
+.markdown-content blockquote {
+  margin: 0.55rem 0;
+  line-height: 1.7;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.4rem;
+}
+
+.markdown-content li + li {
+  margin-top: 0.2rem;
+}
+
+.markdown-content code {
+  padding: 0.12rem 0.3rem;
+  border-radius: 0.25rem;
+  color: #334155;
+  background: #eef1f6;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.88em;
+}
+
+.markdown-content pre {
+  margin: 0.65rem 0;
+  padding: 0.85rem;
+  overflow-x: auto;
+  border-radius: 0.55rem;
+  color: #e2e8f0;
+  background: #1e293b;
+  line-height: 1.6;
+}
+
+.markdown-content pre code {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font-size: 0.78rem;
+}
+
+.markdown-content blockquote {
+  padding-left: 0.85rem;
+  border-left: 3px solid #a8b1c2;
+  color: #5d667a;
+}
+
+.markdown-content a {
+  color: var(--color-primary);
+  text-underline-offset: 2px;
+}
+
+.markdown-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.markdown-content th,
+.markdown-content td {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-soft-border);
+  text-align: left;
+}
+
 .structured-answer {
   display: grid;
   margin-top: 1.3rem;
@@ -452,11 +528,10 @@
   font-size: 0.87rem;
 }
 
-.claim-card p {
+.claim-card .markdown-content {
   margin: 0;
   color: #525b70;
   font-size: 0.8rem;
-  line-height: 1.65;
 }
 
 .claim-card__references {
@@ -609,11 +684,10 @@
   font-size: 0.78rem;
 }
 
-.evidence-list li > p {
+.evidence-list__description {
   margin: 0.28rem 0 0;
   color: #697287;
   font-size: 0.73rem;
-  line-height: 1.55;
 }
 
 .evidence-list pre {
