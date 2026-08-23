@@ -229,3 +229,28 @@ describe('ApiRepoMindService question submission', () => {
     ).rejects.toMatchObject({ code: 'CHAT_FAILED', sessionId: 'session-1' })
   })
 })
+
+describe('ApiRepoMindService conversation deletion', () => {
+  it('deletes a persisted session through the session API', async () => {
+    const remove = vi.spyOn(apiClient, 'delete').mockResolvedValue({
+      data: { success: true, data: { session_id: 'session-1' } },
+    } as never)
+
+    await expect(new ApiRepoMindService().deleteConversation('session-1')).resolves.toBeUndefined()
+
+    expect(remove).toHaveBeenCalledWith('/sessions/session-1')
+  })
+
+  it('preserves a session-not-found error for the workspace to display', async () => {
+    vi.spyOn(apiClient, 'delete').mockResolvedValue({
+      data: {
+        success: false,
+        error: { code: 'SESSION_NOT_FOUND', message: 'Session does not exist.' },
+      },
+    } as never)
+
+    await expect(new ApiRepoMindService().deleteConversation('session-1')).rejects.toMatchObject({
+      code: 'SESSION_NOT_FOUND',
+    })
+  })
+})

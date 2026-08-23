@@ -145,6 +145,15 @@ export class ApiRepoMindService implements RepoMindService {
     }
   }
 
+  async deleteConversation(conversationId: string): Promise<void> {
+    try {
+      const response = await apiClient.delete<unknown>(`/sessions/${conversationId}`)
+      unwrapApiSuccess<unknown>(response.data)
+    } catch (error: unknown) {
+      throw toRepoMindApiError(error)
+    }
+  }
+
   async deleteRepository(repositoryId: string): Promise<void> {
     await apiClient.delete(`/repositories/${repositoryId}`)
   }

@@ -148,6 +148,13 @@ export class MockRepoMindService implements RepoMindService {
     }
   }
 
+  async deleteConversation(conversationId: string): Promise<void> {
+    await wait(160)
+    saveConversations(
+      getStoredConversations().filter((conversation) => conversation.id !== conversationId),
+    )
+  }
+
   async deleteRepository(repositoryId: string): Promise<void> {
     await wait(200)
     const index = mockRepositories.findIndex(r => r.id === repositoryId)
