@@ -49,6 +49,7 @@ export function ProjectWorkspacePage() {
   const [conversation, setConversation] = useState<Conversation>()
   const [isLoading, setIsLoading] = useState(true)
   const [isResponding, setIsResponding] = useState(false)
+  const [deletingConversationId, setDeletingConversationId] = useState<string>()
   const [error, setError] = useState<string>()
 
   useEffect(() => {
@@ -138,6 +139,29 @@ export function ProjectWorkspacePage() {
     }
   }
 
+  async function handleDeleteConversation(targetConversationId: string): Promise<void> {
+    if (!repositoryId || isResponding || deletingConversationId) return
+
+    setDeletingConversationId(targetConversationId)
+    setError(undefined)
+
+    try {
+      await repoMindService.deleteConversation(targetConversationId)
+      setConversations((current) =>
+        current.filter((conversationSummary) => conversationSummary.id !== targetConversationId),
+      )
+
+      if (conversationId === targetConversationId) {
+        setConversation(undefined)
+        navigate(`/projects/${repositoryId}`, { replace: true })
+      }
+    } catch (error: unknown) {
+      setError(toUserFacingMessage(toRepoMindApiError(error)))
+    } finally {
+      setDeletingConversationId(undefined)
+    }
+  }
+
   if (isLoading) {
     return (
       <main className="workspace-status">
@@ -174,6 +198,8 @@ export function ProjectWorkspacePage() {
         repository={repository}
         conversations={conversations}
         activeConversationId={conversationId}
+        deletingConversationId={deletingConversationId}
+        onDeleteConversation={handleDeleteConversation}
       />
 
       <section className="chat-workspace">

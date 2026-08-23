@@ -16,6 +16,7 @@ export interface RepoMindService {
     conversationId: string,
   ): Promise<Conversation | undefined>
   askQuestion(request: AskQuestionRequest): Promise<AskQuestionResponse>
+  deleteConversation(conversationId: string): Promise<void>
   deleteRepository(repositoryId: string): Promise<void>
   retryAnalysis(repositoryId: string): Promise<void>
 }
