@@ -6,6 +6,9 @@ import type {
   ConversationSummary,
   RepositoryInfo,
 } from '../types/api'
+import { toRepoMindApiError, unwrapApiSuccess } from './apiError'
+import type { MessageHistoryDto, SessionListDto } from './apiDtos'
+import { mapMessageHistoryDto, mapSessionListDto } from './apiMappers'
 import type { RepoMindService } from './repoMindService'
 
 export const API_BASE_URL =
@@ -37,27 +40,48 @@ export class ApiRepoMindService implements RepoMindService {
       const response = await apiClient.get(`/repositories/${repositoryId}`)
       return response.data.data
     } catch (error: unknown) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
+      const apiError = toRepoMindApiError(error)
+      if (apiError.code === 'REPOSITORY_NOT_FOUND' || apiError.status === 404) {
         return undefined
       }
-      throw error
+      throw apiError
     }
   }
 
   async getConversations(repositoryId: string): Promise<ConversationSummary[]> {
-    // 백엔드에 대화 기록 API가 아직 없으므로 빈 배열 반환 또는 추후 연동
-    void repositoryId
-    return []
+    try {
+      const response = await apiClient.get<unknown>('/sessions/', {
+        params: { repo_id: repositoryId },
+      })
+      return mapSessionListDto(unwrapApiSuccess<SessionListDto>(response.data))
+    } catch (error: unknown) {
+      const apiError = toRepoMindApiError(error)
+      if (apiError.code === 'REPOSITORY_NOT_FOUND') return []
+      throw apiError
+    }
   }
 
   async getConversation(
     repositoryId: string,
     conversationId: string,
   ): Promise<Conversation | undefined> {
-    // 백엔드 API 연동 전이므로 undefined 반환
-    void repositoryId
-    void conversationId
-    return undefined
+    const session = (await this.getConversations(repositoryId)).find(
+      (candidate) => candidate.id === conversationId && candidate.repositoryId === repositoryId,
+    )
+    if (!session) return undefined
+
+    try {
+      const response = await apiClient.get<unknown>(`/sessions/${conversationId}/messages`)
+      return mapMessageHistoryDto(
+        unwrapApiSuccess<MessageHistoryDto>(response.data),
+        repositoryId,
+        session,
+      )
+    } catch (error: unknown) {
+      const apiError = toRepoMindApiError(error)
+      if (apiError.code === 'SESSION_NOT_FOUND') return undefined
+      throw apiError
+    }
   }
 
   async askQuestion(request: AskQuestionRequest): Promise<AskQuestionResponse> {

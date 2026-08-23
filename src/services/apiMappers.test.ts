@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import { RepoMindApiError } from './apiError'
-import { mapChatMessageDto, mapMessageHistoryDto, mapSessionDto } from './apiMappers'
+import {
+  mapChatMessageDto,
+  mapMessageHistoryDto,
+  mapSessionDto,
+  mapSessionListDto,
+} from './apiMappers'
 
 const sessionDto = {
   session_id: 'session-1',
@@ -26,6 +31,12 @@ describe('API response mappers', () => {
       title: '로그인 흐름',
       updatedAt: '2026-08-23T11:00:00+00:00',
     })
+  })
+
+  it('rejects a malformed session list before it reaches the UI', () => {
+    expect(() => mapSessionListDto({ sessions: [{ session_id: 'session-1' }] })).toThrow(
+      RepoMindApiError,
+    )
   })
 
   it('maps stored structured answers to assistant messages', () => {
