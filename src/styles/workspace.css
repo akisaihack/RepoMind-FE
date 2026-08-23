@@ -90,6 +90,13 @@
   gap: 0.2rem;
 }
 
+.conversation-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.1rem;
+}
+
 .conversation-link {
   display: grid;
   min-width: 0;
@@ -101,6 +108,10 @@
   color: #aeb6c8;
   font-size: 0.78rem;
   text-decoration: none;
+}
+
+.conversation-item .conversation-link {
+  flex: 1;
 }
 
 .conversation-link:hover,
@@ -118,6 +129,31 @@
 .conversation-link time {
   color: #687287;
   font-size: 0.65rem;
+}
+
+.conversation-delete-button {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 0;
+  border-radius: 0.4rem;
+  flex: 0 0 auto;
+  color: #7f899d;
+  background: transparent;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  place-items: center;
+}
+
+.conversation-delete-button:hover {
+  color: #fda4af;
+  background: #3b2630;
+}
+
+.conversation-delete-button:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .conversation-sidebar__project {
