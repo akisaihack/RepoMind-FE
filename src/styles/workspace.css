@@ -208,7 +208,7 @@
   font-size: 0.68rem;
 }
 
-.analysis-ready {
+.analysis-status {
   display: inline-flex;
   padding: 0.4rem 0.65rem;
   border-radius: 99px;
@@ -220,11 +220,31 @@
   font-weight: 700;
 }
 
-.analysis-ready span {
+.analysis-status span {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 50%;
   background: #10b981;
+}
+
+.analysis-status--pending,
+.analysis-status--indexing {
+  color: #a54a0a;
+  background: #fff7ed;
+}
+
+.analysis-status--pending span,
+.analysis-status--indexing span {
+  background: #f59e0b;
+}
+
+.analysis-status--failed {
+  color: #a51d34;
+  background: #fff1f2;
+}
+
+.analysis-status--failed span {
+  background: #f43f5e;
 }
 
 .workspace-alert {
@@ -796,7 +816,7 @@
     padding-inline: 1rem;
   }
 
-  .analysis-ready {
+  .analysis-status {
     display: none;
   }
 

@@ -2,12 +2,14 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react'
 
 interface QuestionComposerProps {
   disabled?: boolean
+  disabledMessage?: string
   suggestions: string[]
-  onSubmit(question: string): Promise<void>
+  onSubmit(question: string): Promise<boolean>
 }
 
 export function QuestionComposer({
   disabled = false,
+  disabledMessage,
   suggestions,
   onSubmit,
 }: QuestionComposerProps) {
@@ -17,8 +19,8 @@ export function QuestionComposer({
     const normalizedQuestion = value.trim()
     if (!normalizedQuestion || disabled) return
 
-    setQuestion('')
-    await onSubmit(normalizedQuestion)
+    const wasSubmitted = await onSubmit(normalizedQuestion)
+    if (wasSubmitted) setQuestion('')
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -74,7 +76,7 @@ export function QuestionComposer({
         </button>
       </form>
       <p className="question-composer__hint">
-        RepoMind는 확인된 근거와 AI의 추론을 구분해 표시합니다.
+        {disabledMessage ?? 'RepoMind는 확인된 근거와 AI의 추론을 구분해 표시합니다.'}
       </p>
     </div>
   )

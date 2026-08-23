@@ -105,6 +105,8 @@ export function toUserFacingMessage(error: RepoMindApiError): string {
       return '대화를 찾을 수 없습니다. 새 대화를 시작해 주세요.'
     case 'NETWORK_ERROR':
       return '서버에 연결하지 못했습니다. 네트워크 상태를 확인해 주세요.'
+    case 'CONVERSATION_SYNC_FAILED':
+      return '답변은 처리됐지만 대화 이력을 동기화하지 못했습니다. 잠시 후 다시 시도해 주세요.'
     default:
       return error.message
   }

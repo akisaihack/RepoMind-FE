@@ -67,4 +67,15 @@ describe('RepoMind API errors', () => {
 
     expect(error.withSessionId('session-1').sessionId).toBe('session-1')
   })
+
+  it('explains when the chat response could not be synchronized to history', () => {
+    expect(
+      toUserFacingMessage(
+        new RepoMindApiError({
+          code: 'CONVERSATION_SYNC_FAILED',
+          message: 'Conversation history is unavailable.',
+        }),
+      ),
+    ).toBe('답변은 처리됐지만 대화 이력을 동기화하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+  })
 })
