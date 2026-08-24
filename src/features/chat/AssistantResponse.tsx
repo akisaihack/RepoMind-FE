@@ -34,6 +34,13 @@ const confidenceLabels: Record<ConfidenceLevel, string> = {
 
 const DEFAULT_VISIBLE_EVIDENCE_COUNT = 5
 
+const graphPresentation = {
+  flow: { title: '코드 실행 흐름', legend: '호출 · HTTP 요청 · API 처리' },
+  impact: { title: '영향도 관계', legend: '변경 대상과 연결된 의존 관계' },
+  history: { title: '변경 이력', legend: '코드 변경과 이력 관계' },
+  relationship: { title: '코드 관계', legend: '조회된 코드 구조 관계' },
+} as const
+
 function stripEmbeddingContext(text: string) {
   const lines = text.split('\n')
   let index = 0
@@ -148,10 +155,9 @@ function ClaimReferences({ evidenceIds, evidence }: { evidenceIds: string[]; evi
 
 export function AssistantResponse({ message }: AssistantResponseProps) {
   const answer = message.answer
-  const hasFlowGraph = Boolean(
-    (!answer?.graph?.kind || answer.graph.kind === 'flow')
-      && answer?.graph?.edges.some((edge) => edge.type.toUpperCase() === 'CALLS'),
-  )
+  const graphKind = answer?.graph?.kind ?? 'flow'
+  const graphInfo = graphPresentation[graphKind]
+  const hasGraph = Boolean(answer?.graph?.edges.length)
   const visibleEvidence = answer?.evidence.slice(0, DEFAULT_VISIBLE_EVIDENCE_COUNT) ?? []
   const additionalEvidence = answer?.evidence.slice(DEFAULT_VISIBLE_EVIDENCE_COUNT) ?? []
 
@@ -198,12 +204,12 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
               ))}
             </ul>
 
-            {hasFlowGraph && answer.graph && (
+            {hasGraph && answer.graph && (
               <details className="answer-panel" open>
                 <summary>
                   <span>
-                    <strong>코드 실행 흐름</strong>
-                    <small>{answer.graph.nodes.length}개 노드</small>
+                    <strong>{graphInfo.title}</strong>
+                    <small>{graphInfo.legend} · {answer.graph.nodes.length}개 노드</small>
                   </span>
                 </summary>
                 <CodeFlowGraph graph={answer.graph} />
