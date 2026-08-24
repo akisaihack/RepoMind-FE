@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   ClaimKind,
   ConfidenceLevel,
+  Evidence,
   EvidenceType,
 } from '../../types/api'
 import { CodeFlowGraph } from '../graph/CodeFlowGraph'
@@ -31,9 +32,114 @@ const confidenceLabels: Record<ConfidenceLevel, string> = {
   low: '낮음',
 }
 
+const DEFAULT_VISIBLE_EVIDENCE_COUNT = 5
+const CODE_PREVIEW_LINE_COUNT = 30
+
+function stripEmbeddingContext(text: string) {
+  const lines = text.split('\n')
+  let index = 0
+  for (const prefix of ['// package: ', '// class: ', '// method: ']) {
+    if (lines[index]?.startsWith(prefix)) index += 1
+  }
+  return lines.slice(index).join('\n')
+}
+
+function getEvidenceDisplay(evidence: Evidence) {
+  const rawExcerpt = evidence.excerpt ?? ''
+  const hasEmbeddingContext = rawExcerpt.startsWith('// package: ') || rawExcerpt.startsWith('// class: ')
+  const classMatch = rawExcerpt.match(/^\/\/ class: (.+?)(?: \([^)]*\))?$/m)
+  const methodMatch = rawExcerpt.match(/^\/\/ method: (.+)$/m)
+  const excerpt = hasEmbeddingContext ? stripEmbeddingContext(rawExcerpt) : rawExcerpt
+  const lines = excerpt.split('\n')
+  const isLongExcerpt = lines.length > CODE_PREVIEW_LINE_COUNT
+
+  return {
+    title: evidence.type === 'code' && methodMatch
+      ? `${classMatch?.[1] ? `${classMatch[1]}.` : ''}${methodMatch[1]}`
+      : evidence.title,
+    description: hasEmbeddingContext ? '' : evidence.description,
+    excerpt,
+    preview: isLongExcerpt
+      ? `${lines.slice(0, CODE_PREVIEW_LINE_COUNT).join('\n')}\n…`
+      : excerpt,
+    isLongExcerpt,
+  }
+}
+
+function EvidenceCard({ evidence }: { evidence: Evidence }) {
+  const display = getEvidenceDisplay(evidence)
+
+  return (
+    <li>
+      <details className="evidence-card" id={`evidence-${evidence.id}`}>
+        <summary>
+          <div className="evidence-list__header">
+            <span className={`evidence-type evidence-type--${evidence.type}`}>
+              {evidenceLabels[evidence.type]}
+            </span>
+            <code title={evidence.location}>{evidence.location}</code>
+          </div>
+          <strong className="evidence-card__title">{display.title}</strong>
+        </summary>
+        <div className="evidence-card__content">
+          {display.description && (
+            <MarkdownContent className="markdown-content evidence-list__description" content={display.description} />
+          )}
+          {display.excerpt && <pre>{display.preview}</pre>}
+          {display.isLongExcerpt && (
+            <details className="evidence-card__full-code">
+              <summary>전체 코드 보기</summary>
+              <pre>{display.excerpt}</pre>
+            </details>
+          )}
+        </div>
+      </details>
+    </li>
+  )
+}
+
+function ClaimReferences({ evidenceIds, evidence }: { evidenceIds: string[]; evidence: Evidence[] }) {
+  const referencedEvidence = evidenceIds
+    .map((evidenceId) => evidence.find((item) => item.id === evidenceId))
+    .filter((item): item is Evidence => item !== undefined)
+
+  if (referencedEvidence.length === 0) return null
+
+  const openEvidence = (id: string) => {
+    const element = document.getElementById(`evidence-${id}`)
+    if (element instanceof HTMLDetailsElement) element.open = true
+  }
+
+  return (
+    <div className="claim-card__references">
+      <div className="claim-card__reference-menu">
+        <button aria-label={`관련 근거 ${referencedEvidence.length}개 보기`} type="button">
+          근거 +{referencedEvidence.length}
+        </button>
+        <div className="claim-card__reference-popover" role="tooltip">
+          <strong>관련 근거 {referencedEvidence.length}개</strong>
+          <ol>
+            {referencedEvidence.map((item) => (
+              <li key={item.id}>
+                <a href={`#evidence-${item.id}`} onClick={() => openEvidence(item.id)}>
+                  {item.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function AssistantResponse({ message }: AssistantResponseProps) {
   const answer = message.answer
-  const hasGraphNodes = Boolean(answer?.graph && answer.graph.nodes.length > 0)
+  const hasFlowGraph = Boolean(
+    answer?.graph?.edges.some((edge) => edge.type.toUpperCase() === 'CALLS'),
+  )
+  const visibleEvidence = answer?.evidence.slice(0, DEFAULT_VISIBLE_EVIDENCE_COUNT) ?? []
+  const additionalEvidence = answer?.evidence.slice(DEFAULT_VISIBLE_EVIDENCE_COUNT) ?? []
 
   return (
     <article className="chat-message chat-message--assistant">
@@ -52,23 +158,12 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
                   <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
                   <h3>{claim.title}</h3>
                   <MarkdownContent className="markdown-content" content={claim.content} />
-                  <div className="claim-card__references">
-                    {claim.evidenceIds.map((evidenceId) => {
-                      const evidenceIndex = answer.evidence.findIndex(
-                        (evidence) => evidence.id === evidenceId,
-                      )
-                      return evidenceIndex >= 0 ? (
-                        <a href={`#evidence-${evidenceId}`} key={evidenceId}>
-                          근거 {evidenceIndex + 1}
-                        </a>
-                      ) : null
-                    })}
-                  </div>
+                  <ClaimReferences evidence={answer.evidence} evidenceIds={claim.evidenceIds} />
                 </article>
               ))}
             </section>
 
-            {hasGraphNodes && answer.graph && (
+            {hasFlowGraph && answer.graph && (
               <details className="answer-panel" open>
                 <summary>
                   <span>
@@ -88,20 +183,16 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
                 </span>
               </summary>
               <ol className="evidence-list">
-                {answer.evidence.map((evidence) => (
-                  <li id={`evidence-${evidence.id}`} key={evidence.id}>
-                    <div className="evidence-list__header">
-                      <span className={`evidence-type evidence-type--${evidence.type}`}>
-                        {evidenceLabels[evidence.type]}
-                      </span>
-                      <code>{evidence.location}</code>
-                    </div>
-                    <strong>{evidence.title}</strong>
-                    <MarkdownContent className="markdown-content evidence-list__description" content={evidence.description} />
-                    {evidence.excerpt && <pre>{evidence.excerpt}</pre>}
-                  </li>
-                ))}
+                {visibleEvidence.map((evidence) => <EvidenceCard evidence={evidence} key={evidence.id} />)}
               </ol>
+              {additionalEvidence.length > 0 && (
+                <details className="evidence-more">
+                  <summary>추가 근거 {additionalEvidence.length}개</summary>
+                  <ol className="evidence-list">
+                    {additionalEvidence.map((evidence) => <EvidenceCard evidence={evidence} key={evidence.id} />)}
+                  </ol>
+                </details>
+              )}
             </details>
 
             <section className="answer-confidence">
