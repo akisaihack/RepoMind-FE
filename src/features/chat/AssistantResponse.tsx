@@ -158,16 +158,24 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
 
         {answer && (
           <div className="structured-answer">
-            <section className="claim-list" aria-label="답변 근거 구분">
+            {answer.summary && (
+              <section className="answer-summary" aria-label="답변 요약">
+                <MarkdownContent className="markdown-content" content={answer.summary} />
+              </section>
+            )}
+
+            <ul className="claim-list" aria-label="상세 답변">
               {answer.claims.map((claim) => (
-                <article className={`claim-card claim-card--${claim.kind}`} key={claim.id}>
-                  <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
-                  <h3>{claim.title}</h3>
-                  <MarkdownContent className="markdown-content" content={claim.content} />
-                  <ClaimReferences evidence={answer.evidence} evidenceIds={claim.evidenceIds} />
-                </article>
+                <li className={`claim-card claim-card--${claim.kind}`} key={claim.id}>
+                  <article>
+                    <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
+                    <h3>{claim.title}</h3>
+                    <MarkdownContent className="markdown-content" content={claim.content} />
+                    <ClaimReferences evidence={answer.evidence} evidenceIds={claim.evidenceIds} />
+                  </article>
+                </li>
               ))}
-            </section>
+            </ul>
 
             {hasFlowGraph && answer.graph && (
               <details className="answer-panel" open>
