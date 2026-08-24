@@ -110,6 +110,13 @@ function ClaimReferences({ evidenceIds, evidence }: { evidenceIds: string[]; evi
     .filter((item): item is Evidence => item !== undefined)
 
   if (referencedEvidence.length === 0) return null
+  const counts = referencedEvidence.reduce<Partial<Record<EvidenceType, number>>>((result, item) => {
+    result[item.type] = (result[item.type] ?? 0) + 1
+    return result
+  }, {})
+  const badgeLabel = Object.entries(counts)
+    .map(([type, count]) => `${evidenceLabels[type as EvidenceType]} +${count}`)
+    .join(' · ')
 
   const openEvidence = (id: string) => {
     const element = document.getElementById(`evidence-${id}`)
@@ -120,7 +127,7 @@ function ClaimReferences({ evidenceIds, evidence }: { evidenceIds: string[]; evi
     <div className="claim-card__references">
       <div className="claim-card__reference-menu">
         <button aria-label={`관련 근거 ${referencedEvidence.length}개 보기`} type="button">
-          근거 +{referencedEvidence.length}
+          {badgeLabel}
         </button>
         <div className="claim-card__reference-popover" role="tooltip">
           <strong>관련 근거 {referencedEvidence.length}개</strong>
@@ -142,7 +149,8 @@ function ClaimReferences({ evidenceIds, evidence }: { evidenceIds: string[]; evi
 export function AssistantResponse({ message }: AssistantResponseProps) {
   const answer = message.answer
   const hasFlowGraph = Boolean(
-    answer?.graph?.edges.some((edge) => edge.type.toUpperCase() === 'CALLS'),
+    (!answer?.graph?.kind || answer.graph.kind === 'flow')
+      && answer?.graph?.edges.some((edge) => edge.type.toUpperCase() === 'CALLS'),
   )
   const visibleEvidence = answer?.evidence.slice(0, DEFAULT_VISIBLE_EVIDENCE_COUNT) ?? []
   const additionalEvidence = answer?.evidence.slice(DEFAULT_VISIBLE_EVIDENCE_COUNT) ?? []

@@ -54,6 +54,8 @@ export type GraphEdgeType =
   | 'has_version'
   | 'implements'
   | 'exposes'
+  | 'handled_by'
+  | 'http_calls'
   | 'changed_by'
   | 'documented_by'
 
@@ -74,6 +76,7 @@ export interface GraphEdgeDto {
 }
 
 export interface GraphDataDto {
+  kind?: 'flow' | 'impact' | 'history' | 'relationship'
   nodes: GraphNodeDto[]
   edges: GraphEdgeDto[]
 }
