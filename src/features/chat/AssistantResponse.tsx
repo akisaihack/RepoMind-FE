@@ -178,8 +178,21 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
                   <article>
                     <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
                     <h3>{claim.title}</h3>
-                    <MarkdownContent className="markdown-content" content={claim.content} />
-                    <ClaimReferences evidence={answer.evidence} evidenceIds={claim.evidenceIds} />
+                    {claim.citations && claim.citations.length > 0 ? (
+                      <div className="claim-card__citations">
+                        {claim.citations.map((citation, index) => (
+                          <div key={`${claim.id}-citation-${index}`}>
+                            <MarkdownContent className="markdown-content" content={citation.content} />
+                            <ClaimReferences evidence={answer.evidence} evidenceIds={citation.evidenceIds} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <MarkdownContent className="markdown-content" content={claim.content} />
+                        <ClaimReferences evidence={answer.evidence} evidenceIds={claim.evidenceIds} />
+                      </>
+                    )}
                   </article>
                 </li>
               ))}

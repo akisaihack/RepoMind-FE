@@ -36,6 +36,12 @@ export interface AnswerClaim {
   title: string
   content: string
   evidenceIds: string[]
+  citations?: ClaimCitation[]
+}
+
+export interface ClaimCitation {
+  content: string
+  evidenceIds: string[]
 }
 
 export type GraphNodeType =
