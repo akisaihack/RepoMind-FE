@@ -33,7 +33,6 @@ const confidenceLabels: Record<ConfidenceLevel, string> = {
 }
 
 const DEFAULT_VISIBLE_EVIDENCE_COUNT = 5
-const CODE_PREVIEW_LINE_COUNT = 30
 
 function stripEmbeddingContext(text: string) {
   const lines = text.split('\n')
@@ -46,12 +45,20 @@ function stripEmbeddingContext(text: string) {
 
 function getEvidenceDisplay(evidence: Evidence) {
   const rawExcerpt = evidence.excerpt ?? ''
+  const rawFullExcerpt = evidence.fullExcerpt ?? rawExcerpt
   const hasEmbeddingContext = rawExcerpt.startsWith('// package: ') || rawExcerpt.startsWith('// class: ')
   const classMatch = rawExcerpt.match(/^\/\/ class: (.+?)(?: \([^)]*\))?$/m)
   const methodMatch = rawExcerpt.match(/^\/\/ method: (.+)$/m)
   const excerpt = hasEmbeddingContext ? stripEmbeddingContext(rawExcerpt) : rawExcerpt
-  const lines = excerpt.split('\n')
-  const isLongExcerpt = lines.length > CODE_PREVIEW_LINE_COUNT
+  const fullExcerpt = rawFullExcerpt.startsWith('// package: ') || rawFullExcerpt.startsWith('// class: ')
+    ? stripEmbeddingContext(rawFullExcerpt)
+    : rawFullExcerpt
+  const hasFullExcerpt = fullExcerpt !== excerpt
+  const preview = [
+    evidence.hasMoreBefore ? '…' : '',
+    excerpt,
+    evidence.hasMoreAfter ? '…' : '',
+  ].filter(Boolean).join('\n')
 
   return {
     title: evidence.type === 'code' && methodMatch
@@ -59,10 +66,9 @@ function getEvidenceDisplay(evidence: Evidence) {
       : evidence.title,
     description: hasEmbeddingContext ? '' : evidence.description,
     excerpt,
-    preview: isLongExcerpt
-      ? `${lines.slice(0, CODE_PREVIEW_LINE_COUNT).join('\n')}\n…`
-      : excerpt,
-    isLongExcerpt,
+    fullExcerpt,
+    preview,
+    hasFullExcerpt,
   }
 }
 
@@ -86,10 +92,10 @@ function EvidenceCard({ evidence }: { evidence: Evidence }) {
             <MarkdownContent className="markdown-content evidence-list__description" content={display.description} />
           )}
           {display.excerpt && <pre>{display.preview}</pre>}
-          {display.isLongExcerpt && (
+          {display.hasFullExcerpt && (
             <details className="evidence-card__full-code">
               <summary>전체 코드 보기</summary>
-              <pre>{display.excerpt}</pre>
+              <pre>{display.fullExcerpt}</pre>
             </details>
           )}
         </div>

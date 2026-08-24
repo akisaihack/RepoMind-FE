@@ -23,6 +23,11 @@ export interface Evidence {
   location: string
   description: string
   excerpt?: string
+  fullExcerpt?: string
+  excerptStartLine?: number
+  excerptEndLine?: number
+  hasMoreBefore?: boolean
+  hasMoreAfter?: boolean
 }
 
 export interface AnswerClaim {
