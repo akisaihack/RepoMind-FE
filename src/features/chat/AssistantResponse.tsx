@@ -33,7 +33,13 @@ const confidenceLabels: Record<ConfidenceLevel, string> = {
 }
 
 const DEFAULT_VISIBLE_EVIDENCE_COUNT = 5
-const CODE_PREVIEW_LINE_COUNT = 30
+
+const graphPresentation = {
+  flow: { title: '코드 실행 흐름', legend: '호출 · HTTP 요청 · API 처리' },
+  impact: { title: '영향도 관계', legend: '변경 대상과 연결된 의존 관계' },
+  history: { title: '변경 이력', legend: '코드 변경과 이력 관계' },
+  relationship: { title: '코드 관계', legend: '조회된 코드 구조 관계' },
+} as const
 
 function stripEmbeddingContext(text: string) {
   const lines = text.split('\n')
@@ -46,12 +52,20 @@ function stripEmbeddingContext(text: string) {
 
 function getEvidenceDisplay(evidence: Evidence) {
   const rawExcerpt = evidence.excerpt ?? ''
+  const rawFullExcerpt = evidence.fullExcerpt ?? rawExcerpt
   const hasEmbeddingContext = rawExcerpt.startsWith('// package: ') || rawExcerpt.startsWith('// class: ')
   const classMatch = rawExcerpt.match(/^\/\/ class: (.+?)(?: \([^)]*\))?$/m)
   const methodMatch = rawExcerpt.match(/^\/\/ method: (.+)$/m)
   const excerpt = hasEmbeddingContext ? stripEmbeddingContext(rawExcerpt) : rawExcerpt
-  const lines = excerpt.split('\n')
-  const isLongExcerpt = lines.length > CODE_PREVIEW_LINE_COUNT
+  const fullExcerpt = rawFullExcerpt.startsWith('// package: ') || rawFullExcerpt.startsWith('// class: ')
+    ? stripEmbeddingContext(rawFullExcerpt)
+    : rawFullExcerpt
+  const hasFullExcerpt = fullExcerpt !== excerpt
+  const preview = [
+    evidence.hasMoreBefore ? '…' : '',
+    excerpt,
+    evidence.hasMoreAfter ? '…' : '',
+  ].filter(Boolean).join('\n')
 
   return {
     title: evidence.type === 'code' && methodMatch
@@ -59,10 +73,9 @@ function getEvidenceDisplay(evidence: Evidence) {
       : evidence.title,
     description: hasEmbeddingContext ? '' : evidence.description,
     excerpt,
-    preview: isLongExcerpt
-      ? `${lines.slice(0, CODE_PREVIEW_LINE_COUNT).join('\n')}\n…`
-      : excerpt,
-    isLongExcerpt,
+    fullExcerpt,
+    preview,
+    hasFullExcerpt,
   }
 }
 
@@ -86,10 +99,10 @@ function EvidenceCard({ evidence }: { evidence: Evidence }) {
             <MarkdownContent className="markdown-content evidence-list__description" content={display.description} />
           )}
           {display.excerpt && <pre>{display.preview}</pre>}
-          {display.isLongExcerpt && (
+          {display.hasFullExcerpt && (
             <details className="evidence-card__full-code">
               <summary>전체 코드 보기</summary>
-              <pre>{display.excerpt}</pre>
+              <pre>{display.fullExcerpt}</pre>
             </details>
           )}
         </div>
@@ -104,6 +117,13 @@ function ClaimReferences({ evidenceIds, evidence }: { evidenceIds: string[]; evi
     .filter((item): item is Evidence => item !== undefined)
 
   if (referencedEvidence.length === 0) return null
+  const counts = referencedEvidence.reduce<Partial<Record<EvidenceType, number>>>((result, item) => {
+    result[item.type] = (result[item.type] ?? 0) + 1
+    return result
+  }, {})
+  const badgeLabel = Object.entries(counts)
+    .map(([type, count]) => `${evidenceLabels[type as EvidenceType]} +${count}`)
+    .join(' · ')
 
   const openEvidence = (id: string) => {
     const element = document.getElementById(`evidence-${id}`)
@@ -114,7 +134,7 @@ function ClaimReferences({ evidenceIds, evidence }: { evidenceIds: string[]; evi
     <div className="claim-card__references">
       <div className="claim-card__reference-menu">
         <button aria-label={`관련 근거 ${referencedEvidence.length}개 보기`} type="button">
-          근거 +{referencedEvidence.length}
+          {badgeLabel}
         </button>
         <div className="claim-card__reference-popover" role="tooltip">
           <strong>관련 근거 {referencedEvidence.length}개</strong>
@@ -135,9 +155,9 @@ function ClaimReferences({ evidenceIds, evidence }: { evidenceIds: string[]; evi
 
 export function AssistantResponse({ message }: AssistantResponseProps) {
   const answer = message.answer
-  const hasFlowGraph = Boolean(
-    answer?.graph?.edges.some((edge) => edge.type.toUpperCase() === 'CALLS'),
-  )
+  const graphKind = answer?.graph?.kind ?? 'flow'
+  const graphInfo = graphPresentation[graphKind]
+  const hasGraph = Boolean(answer?.graph?.edges.length)
   const visibleEvidence = answer?.evidence.slice(0, DEFAULT_VISIBLE_EVIDENCE_COUNT) ?? []
   const additionalEvidence = answer?.evidence.slice(DEFAULT_VISIBLE_EVIDENCE_COUNT) ?? []
 
@@ -152,23 +172,24 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
 
         {answer && (
           <div className="structured-answer">
-            <section className="claim-list" aria-label="답변 근거 구분">
-              {answer.claims.map((claim) => (
-                <article className={`claim-card claim-card--${claim.kind}`} key={claim.id}>
-                  <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
-                  <h3>{claim.title}</h3>
-                  <MarkdownContent className="markdown-content" content={claim.content} />
-                  <ClaimReferences evidence={answer.evidence} evidenceIds={claim.evidenceIds} />
-                </article>
-              ))}
-            </section>
+            {answer.summary && (
+              <section className="answer-summary" aria-label="답변 요약">
+                <MarkdownContent className="markdown-content" content={answer.summary} />
+              </section>
+            )}
 
-            {hasFlowGraph && answer.graph && (
+            <ul className="claim-list" aria-label="상세 답변">
+              {answer.claims.map((claim) => (
+                <ClaimCard claim={claim} evidence={answer.evidence} key={claim.id} />
+              ))}
+            </ul>
+
+            {hasGraph && answer.graph && (
               <details className="answer-panel" open>
                 <summary>
                   <span>
-                    <strong>코드 실행 흐름</strong>
-                    <small>{answer.graph.nodes.length}개 노드</small>
+                    <strong>{graphInfo.title}</strong>
+                    <small>{graphInfo.legend} · {answer.graph.nodes.length}개 노드</small>
                   </span>
                 </summary>
                 <CodeFlowGraph graph={answer.graph} />
@@ -219,5 +240,31 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
         )}
       </div>
     </article>
+  )
+}
+
+function ClaimCard({
+  claim,
+  evidence,
+}: {
+  claim: NonNullable<ChatMessage['answer']>['claims'][number]
+  evidence: Evidence[]
+}) {
+  // citations.content is an LLM-provided reference anchor, not answer text.
+  // Render the canonical claim once and use citations only to refine its evidence badge.
+  const evidenceIds = Array.from(new Set([
+    ...claim.evidenceIds,
+    ...(claim.citations?.flatMap((citation) => citation.evidenceIds) ?? []),
+  ]))
+
+  return (
+    <li className={`claim-card claim-card--${claim.kind}`}>
+      <article>
+        <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
+        <h3>{claim.title}</h3>
+        <MarkdownContent className="markdown-content" content={claim.content} />
+        <ClaimReferences evidence={evidence} evidenceIds={evidenceIds} />
+      </article>
+    </li>
   )
 }

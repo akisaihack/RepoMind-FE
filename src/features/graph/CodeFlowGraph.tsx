@@ -25,6 +25,19 @@ const nodeColors: Record<GraphNodeType, string> = {
 }
 
 function projectFunctionCalls(graph: GraphDataDto): GraphDataDto {
+  // The current API already projects flow graphs. Keep its endpoint and HTTP
+  // edges so a frontend request can remain connected to the controller path.
+  if (graph.kind === 'flow') {
+    const allowedTypes = new Set(['calls', 'http_calls', 'handled_by'])
+    const edges = graph.edges.filter((edge) => allowedTypes.has(edge.type))
+    const connectedNodeIds = new Set(edges.flatMap((edge) => [edge.source, edge.target]))
+    return {
+      kind: graph.kind,
+      nodes: graph.nodes.filter((node) => connectedNodeIds.has(node.id)),
+      edges,
+    }
+  }
+
   const ownerByVersionId = new Map(
     graph.edges
       .filter((edge) => edge.type === 'has_version')
@@ -126,7 +139,7 @@ export function CodeFlowGraph({ graph }: CodeFlowGraphProps) {
   )
 
   return (
-    <div className="code-flow-graph" role="region" aria-label="코드 실행 흐름 그래프">
+    <div className="code-flow-graph" role="region" aria-label="코드 관계 그래프">
       <ReactFlow
         nodes={nodes}
         edges={edges}

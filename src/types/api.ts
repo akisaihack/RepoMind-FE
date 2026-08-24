@@ -23,12 +23,23 @@ export interface Evidence {
   location: string
   description: string
   excerpt?: string
+  fullExcerpt?: string
+  excerptStartLine?: number
+  excerptEndLine?: number
+  hasMoreBefore?: boolean
+  hasMoreAfter?: boolean
 }
 
 export interface AnswerClaim {
   id: string
   kind: ClaimKind
   title: string
+  content: string
+  evidenceIds: string[]
+  citations?: ClaimCitation[]
+}
+
+export interface ClaimCitation {
   content: string
   evidenceIds: string[]
 }
@@ -49,6 +60,8 @@ export type GraphEdgeType =
   | 'has_version'
   | 'implements'
   | 'exposes'
+  | 'handled_by'
+  | 'http_calls'
   | 'changed_by'
   | 'documented_by'
 
@@ -69,6 +82,7 @@ export interface GraphEdgeDto {
 }
 
 export interface GraphDataDto {
+  kind?: 'flow' | 'impact' | 'history' | 'relationship'
   nodes: GraphNodeDto[]
   edges: GraphEdgeDto[]
 }
