@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ConversationSidebar } from '../features/chat/ConversationSidebar'
 import { MessageList } from '../features/chat/MessageList'
@@ -39,6 +39,7 @@ export function ProjectWorkspacePage() {
   const repositoryId = projectId
   const navigate = useNavigate()
   const [repository, setRepository] = useState<RepositoryInfo>()
+  const repositoryRef = useRef<RepositoryInfo | undefined>(undefined)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [conversation, setConversation] = useState<Conversation>()
   const [isLoading, setIsLoading] = useState(true)
@@ -52,7 +53,11 @@ export function ProjectWorkspacePage() {
     async function loadWorkspace() {
       if (!repositoryId) return
 
-      setIsLoading(true)
+      // 첫 대화가 만들어지면 URL에 conversationId만 추가된다. 이 경우에는
+      // 이미 그려진 워크스페이스를 유지해 전체 페이지가 새로고침되는 듯한
+      // 로딩 화면을 보이지 않는다.
+      const isSwitchingProject = repositoryRef.current?.id !== repositoryId
+      if (isSwitchingProject) setIsLoading(true)
       setError(undefined)
 
       try {
@@ -67,6 +72,7 @@ export function ProjectWorkspacePage() {
 
         if (!isCurrent) return
         setRepository(repositoryResult)
+        repositoryRef.current = repositoryResult
         setConversations(conversationResults)
         setConversation(conversationResult)
 
@@ -156,7 +162,7 @@ export function ProjectWorkspacePage() {
     }
   }
 
-  if (isLoading) {
+  if (isLoading && repository?.id !== repositoryId) {
     return (
       <main className="workspace-status">
         <div className="workspace-loader" aria-label="Workspace 불러오는 중" />
