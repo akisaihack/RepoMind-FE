@@ -3,13 +3,12 @@ import {
   Background,
   Controls,
   MarkerType,
-  MiniMap,
   ReactFlow,
   type Edge,
   type Node,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { GraphDataDto, GraphNodeType } from '../../types/api'
+import type { GraphDataDto, GraphEdgeDto, GraphNodeType } from '../../types/api'
 
 interface CodeFlowGraphProps {
   graph: GraphDataDto
@@ -23,6 +22,38 @@ const nodeColors: Record<GraphNodeType, string> = {
   api: '#059669',
   commit: '#d97706',
   document: '#be185d',
+}
+
+function projectFunctionCalls(graph: GraphDataDto): GraphDataDto {
+  const ownerByVersionId = new Map(
+    graph.edges
+      .filter((edge) => edge.type === 'has_version')
+      .map((edge) => [edge.target, edge.source]),
+  )
+  const versionIds = new Set(ownerByVersionId.keys())
+  const visibleNodeIds = new Set(
+    graph.nodes.filter((node) => !versionIds.has(node.id)).map((node) => node.id),
+  )
+  const seenCalls = new Set<string>()
+  const edges: GraphEdgeDto[] = []
+
+  for (const edge of graph.edges) {
+    if (edge.type !== 'calls') continue
+
+    const source = ownerByVersionId.get(edge.source) ?? edge.source
+    const target = ownerByVersionId.get(edge.target) ?? edge.target
+    const callId = `${source}:calls:${target}`
+    if (source === target || !visibleNodeIds.has(source) || !visibleNodeIds.has(target) || seenCalls.has(callId)) {
+      continue
+    }
+    seenCalls.add(callId)
+    edges.push({ ...edge, id: callId, source, target, type: 'calls', label: 'CALLS' })
+  }
+
+  return {
+    nodes: graph.nodes.filter((node) => visibleNodeIds.has(node.id)),
+    edges,
+  }
 }
 
 function getNodePositions(graph: GraphDataDto) {
@@ -53,11 +84,12 @@ function getNodePositions(graph: GraphDataDto) {
 }
 
 export function CodeFlowGraph({ graph }: CodeFlowGraphProps) {
-  const positions = useMemo(() => getNodePositions(graph), [graph])
+  const flowGraph = useMemo(() => projectFunctionCalls(graph), [graph])
+  const positions = useMemo(() => getNodePositions(flowGraph), [flowGraph])
 
   const nodes = useMemo<Node[]>(
     () =>
-      graph.nodes.map((node) => ({
+      flowGraph.nodes.map((node) => ({
         id: node.id,
         position: positions.get(node.id) ?? { x: 0, y: 0 },
         data: {
@@ -76,12 +108,12 @@ export function CodeFlowGraph({ graph }: CodeFlowGraphProps) {
           width: 210,
         },
       })),
-    [graph.nodes, positions],
+    [flowGraph.nodes, positions],
   )
 
   const edges = useMemo<Edge[]>(
     () =>
-      graph.edges.map((edge) => ({
+      flowGraph.edges.map((edge) => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,
@@ -90,7 +122,7 @@ export function CodeFlowGraph({ graph }: CodeFlowGraphProps) {
         style: { stroke: '#94a3b8', strokeWidth: 1.5 },
         labelStyle: { fill: '#64748b', fontSize: 10, fontWeight: 700 },
       })),
-    [graph.edges],
+    [flowGraph.edges],
   )
 
   return (
@@ -107,7 +139,6 @@ export function CodeFlowGraph({ graph }: CodeFlowGraphProps) {
         maxZoom={1.6}
       >
         <Background color="#cbd5e1" gap={20} size={1} />
-        <MiniMap pannable zoomable nodeColor="#a5b4fc" />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>

@@ -46,6 +46,7 @@ export type GraphEdgeType =
   | 'contains'
   | 'imports'
   | 'calls'
+  | 'has_version'
   | 'implements'
   | 'exposes'
   | 'changed_by'

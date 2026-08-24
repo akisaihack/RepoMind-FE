@@ -13,12 +13,6 @@ import type {
 } from '../types/api'
 import '../styles/workspace.css'
 
-const starterQuestions = [
-  '회원 탈퇴 요청은 어디에서 시작돼?',
-  '회원 탈퇴가 왜 논리 삭제로 구현되어 있어?',
-  'MemberService를 수정하면 어디까지 영향이 있어?',
-]
-
 const analysisStatusLabels = {
   pending: '분석 대기 중',
   indexing: '분석 중',
@@ -233,7 +227,7 @@ export function ProjectWorkspacePage() {
         <QuestionComposer
           disabled={isResponding || !isRepositoryReady}
           disabledMessage={composerDisabledMessage}
-          suggestions={conversation?.messages.length ? [] : starterQuestions}
+          suggestions={[]}
           onSubmit={handleQuestion}
         />
       </section>
