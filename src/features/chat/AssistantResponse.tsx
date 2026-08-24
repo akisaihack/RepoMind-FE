@@ -180,27 +180,7 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
 
             <ul className="claim-list" aria-label="상세 답변">
               {answer.claims.map((claim) => (
-                <li className={`claim-card claim-card--${claim.kind}`} key={claim.id}>
-                  <article>
-                    <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
-                    <h3>{claim.title}</h3>
-                    {claim.citations && claim.citations.length > 0 ? (
-                      <div className="claim-card__citations">
-                        {claim.citations.map((citation, index) => (
-                          <div key={`${claim.id}-citation-${index}`}>
-                            <MarkdownContent className="markdown-content" content={citation.content} />
-                            <ClaimReferences evidence={answer.evidence} evidenceIds={citation.evidenceIds} />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <>
-                        <MarkdownContent className="markdown-content" content={claim.content} />
-                        <ClaimReferences evidence={answer.evidence} evidenceIds={claim.evidenceIds} />
-                      </>
-                    )}
-                  </article>
-                </li>
+                <ClaimCard claim={claim} evidence={answer.evidence} key={claim.id} />
               ))}
             </ul>
 
@@ -260,5 +240,31 @@ export function AssistantResponse({ message }: AssistantResponseProps) {
         )}
       </div>
     </article>
+  )
+}
+
+function ClaimCard({
+  claim,
+  evidence,
+}: {
+  claim: NonNullable<ChatMessage['answer']>['claims'][number]
+  evidence: Evidence[]
+}) {
+  // citations.content is an LLM-provided reference anchor, not answer text.
+  // Render the canonical claim once and use citations only to refine its evidence badge.
+  const evidenceIds = Array.from(new Set([
+    ...claim.evidenceIds,
+    ...(claim.citations?.flatMap((citation) => citation.evidenceIds) ?? []),
+  ]))
+
+  return (
+    <li className={`claim-card claim-card--${claim.kind}`}>
+      <article>
+        <span className="claim-card__kind">{claimLabels[claim.kind]}</span>
+        <h3>{claim.title}</h3>
+        <MarkdownContent className="markdown-content" content={claim.content} />
+        <ClaimReferences evidence={evidence} evidenceIds={evidenceIds} />
+      </article>
+    </li>
   )
 }
