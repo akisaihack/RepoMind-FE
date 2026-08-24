@@ -10,7 +10,24 @@ interface MarkdownContentProps {
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
   return (
     <div className={className}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code({ className, children, ...props }) {
+            const isBlock = Boolean(className?.startsWith('language-'))
+            return (
+              <code
+                {...props}
+                className={isBlock ? `markdown-code-block ${className}` : 'markdown-inline-code'}
+              >
+                {children}
+              </code>
+            )
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   )
 }
