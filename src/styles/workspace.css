@@ -803,6 +803,16 @@
   background: #f5f3ff;
 }
 
+.evidence-type--pr {
+  color: #0369a1;
+  background: #f0f9ff;
+}
+
+.evidence-type--issue {
+  color: #a16207;
+  background: #fefce8;
+}
+
 .evidence-type--itsm {
   color: #a54a0a;
   background: #fff7ed;

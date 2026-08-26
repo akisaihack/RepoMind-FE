@@ -21,6 +21,8 @@ const claimLabels: Record<ClaimKind, string> = {
 const evidenceLabels: Record<EvidenceType, string> = {
   code: 'CODE',
   commit: 'COMMIT',
+  pr: 'PR',
+  issue: 'ISSUE',
   itsm: 'ITSM',
   document: 'DOCS',
   test: 'TEST',
