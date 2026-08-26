@@ -22,13 +22,23 @@ const nodeColors: Record<GraphNodeType, string> = {
   api: '#059669',
   commit: '#d97706',
   document: '#be185d',
+  class: '#0369a1',
+  interface: '#0284c7',
+  method: '#0891b2',
+  method_version: '#0e7490',
+  package: '#4338ca',
 }
 
 function projectFunctionCalls(graph: GraphDataDto): GraphDataDto {
   // The current API already projects flow graphs. Keep its endpoint and HTTP
   // edges so a frontend request can remain connected to the controller path.
+  // NOTE: the backend renamed the API-endpoint edge type from "handled_by" to
+  // "exposes" (see RepoMind-BE docs/qa_retrieval_part_plan.md "0-13"). Filtering
+  // on the old "handled_by" name here silently dropped every exposes edge,
+  // which disconnected API/endpoint nodes from flow graphs and made them show
+  // up as floating nodes.
   if (graph.kind === 'flow') {
-    const allowedTypes = new Set(['calls', 'http_calls', 'handled_by'])
+    const allowedTypes = new Set(['calls', 'http_calls', 'exposes'])
     const edges = graph.edges.filter((edge) => allowedTypes.has(edge.type))
     const connectedNodeIds = new Set(edges.flatMap((edge) => [edge.source, edge.target]))
     return {

@@ -52,6 +52,11 @@ export type GraphNodeType =
   | 'api'
   | 'commit'
   | 'document'
+  | 'class'
+  | 'interface'
+  | 'method'
+  | 'method_version'
+  | 'package'
 
 export type GraphEdgeType =
   | 'contains'
