@@ -10,7 +10,7 @@ export interface RepositoryInfo {
 
 export type QuestionKind = 'location' | 'flow' | 'impact' | 'intent'
 
-export type EvidenceType = 'code' | 'commit' | 'itsm' | 'document' | 'test'
+export type EvidenceType = 'code' | 'commit' | 'pr' | 'issue' | 'itsm' | 'document' | 'test'
 
 export type ClaimKind = 'fact' | 'stated_intent' | 'inference'
 
